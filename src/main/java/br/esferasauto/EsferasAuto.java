@@ -31,6 +31,7 @@ public final class EsferasAuto {
     static final String EC = "com.nonopichy.yggdrasilremake.client.warriors.esferas.EsferasClient";
     static final String FLY = "com.dragonminez.client.events.FlySkillEvent";
     static final String PROV = "com.dragonminez.common.stats.StatsProvider";
+    static final String FOH = "com.dragonminez.client.flight.FlightOrientationHandler";
     static final String CAP = "com.dragonminez.common.stats.StatsCapability";
 
     /** Altura maxima (Y) do voo. Mais alto que isso o servidor joga voce no espaco. */
@@ -159,8 +160,7 @@ public final class EsferasAuto {
 
         switch (s) {
             case CLIMB -> {
-                p.setYRot(yaw);
-                p.setXRot(-90f);
+                girar(p, yaw, -90f);
                 mc.options.keyUp.setDown(true);
                 mc.options.keySprint.setDown(p.getY() < cruiseY - 25); // perto do topo, sem correr: nao passa da altura
                 if (p.getY() >= cruiseY - 6) { s = S.CRUISE; msg(mc, "Nas nuvens. Indo ate a esfera de " + alvoEstrelas + " estrela(s)."); return; }
@@ -170,18 +170,16 @@ public final class EsferasAuto {
                 }
             }
             case ESCAPE -> {
-                p.setYRot(yaw);
-                p.setXRot(0f);
+                girar(p, yaw, 0f);
                 mc.options.keyUp.setDown(true);
                 mc.options.keySprint.setDown(true);
                 if (++t > 30) { s = S.CLIMB; ultimaY = p.getY(); }
             }
             case CRUISE -> {
                 if (h < 3.5) { s = S.DESCEND; msg(mc, "Em cima da esfera. Descendo."); return; }
-                p.setYRot(yaw);
                 float pitch = (float) Math.max(-35, Math.min(35, -(cruiseY - p.getY()) * 4));
                 if (p.getY() > ALTURA_MAXIMA - 5) pitch = 60f; // nunca passa do limite: desce forte
-                p.setXRot(pitch);
+                girar(p, yaw, pitch);
                 mc.options.keyUp.setDown(true);
                 mc.options.keySprint.setDown(h > 30);
             }
@@ -234,8 +232,35 @@ public final class EsferasAuto {
     // ---------------- util ----------------
     static void mirar(LocalPlayer p, double dx, double dy, double dz) {
         double h = Math.sqrt(dx * dx + dz * dz);
-        p.setYRot((float) Math.toDegrees(Math.atan2(-dx, dz)));
-        p.setXRot((float) -Math.toDegrees(Math.atan2(dy, h)));
+        girar(p, (float) Math.toDegrees(Math.atan2(-dx, dz)), (float) -Math.toDegrees(Math.atan2(dy, h)));
+    }
+
+    /**
+     * No voo do DragonMineZ a direcao vem de FlightOrientationHandler (so muda com o mouse),
+     * entao girar o jogador direto nao adianta. Aqui "mexemos o mouse" por ele, ate a mira alvo.
+     */
+    static void girar(LocalPlayer p, float yawAlvo, float pitchAlvo) {
+        try {
+            Class<?> c = classe(FOH);
+            Method apply = c.getMethod("applyMouseDelta", LocalPlayer.class, double.class, double.class);
+            java.lang.reflect.Field fa = c.getDeclaredField("active"); fa.setAccessible(true);
+            java.lang.reflect.Field fy = c.getDeclaredField("yaw"); fy.setAccessible(true);
+            java.lang.reflect.Field fp = c.getDeclaredField("pitch"); fp.setAccessible(true);
+            if (!fa.getBoolean(null)) apply.invoke(null, p, 0.0, 0.0); // ativa e sincroniza com o jogador
+            float dy = Math.max(-25f, Math.min(25f, wrap(yawAlvo - fy.getFloat(null))));
+            float dp = Math.max(-25f, Math.min(25f, wrap(pitchAlvo - fp.getFloat(null))));
+            apply.invoke(null, p, dy / 0.15, dp / 0.15); // 0.15 = TURN_SENSITIVITY do mod
+        } catch (Throwable ex) {
+            p.setYRot(yawAlvo);
+            p.setXRot(pitchAlvo);
+        }
+    }
+
+    static float wrap(float a) {
+        a %= 360f;
+        if (a >= 180f) a -= 360f;
+        if (a < -180f) a += 360f;
+        return a;
     }
 
     static void soltar(Minecraft mc) {
