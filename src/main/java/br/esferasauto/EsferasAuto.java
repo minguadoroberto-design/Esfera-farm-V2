@@ -33,6 +33,9 @@ public final class EsferasAuto {
     static final String PROV = "com.dragonminez.common.stats.StatsProvider";
     static final String CAP = "com.dragonminez.common.stats.StatsCapability";
 
+    /** Altura (Y) de cruzeiro. Mais alto que isso o servidor joga voce no espaco. */
+    static final int ALTURA_CRUZEIRO = 207;
+
     static final KeyMapping KEY = new KeyMapping("Esferas: abrir menu / parar", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_K, "Esferas AutoFarm");
 
     enum S { OFF, SYNC, FLYON, CLIMB, ESCAPE, CRUISE, DESCEND, TOUCH }
@@ -128,7 +131,7 @@ public final class EsferasAuto {
         Object cur = achar(alvoEstrelas);
         int by = cur == null ? (int) p.getY() : inteiro(cur, "y");
         int topo = mc.level.getMaxBuildHeight() - 8;
-        cruiseY = Math.min(topo, Math.max(205, Math.max((int) p.getY(), by) + 60));
+        cruiseY = Math.min(topo, Math.max(ALTURA_CRUZEIRO, by + 15));
         ultimaY = p.getY();
         ticksBola = 0;
         s = S.CLIMB;
@@ -158,8 +161,8 @@ public final class EsferasAuto {
                 p.setYRot(yaw);
                 p.setXRot(-90f);
                 mc.options.keyUp.setDown(true);
-                mc.options.keySprint.setDown(true);
-                if (p.getY() >= cruiseY - 3) { s = S.CRUISE; msg(mc, "Nas nuvens. Indo ate a esfera de " + alvoEstrelas + " estrela(s)."); return; }
+                mc.options.keySprint.setDown(p.getY() < cruiseY - 25); // perto do topo, sem correr: nao passa da altura
+                if (p.getY() >= cruiseY - 6) { s = S.CRUISE; msg(mc, "Nas nuvens. Indo ate a esfera de " + alvoEstrelas + " estrela(s)."); return; }
                 if (ticksBola % 30 == 0) {
                     if (p.getY() - ultimaY < 1.0) { s = S.ESCAPE; t = 0; }
                     ultimaY = p.getY();
