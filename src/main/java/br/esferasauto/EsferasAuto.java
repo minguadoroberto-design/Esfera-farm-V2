@@ -33,8 +33,9 @@ public final class EsferasAuto {
     static final String PROV = "com.dragonminez.common.stats.StatsProvider";
     static final String CAP = "com.dragonminez.common.stats.StatsCapability";
 
-    /** Altura (Y) de cruzeiro. Mais alto que isso o servidor joga voce no espaco. */
-    static final int ALTURA_CRUZEIRO = 207;
+    /** Altura maxima (Y) do voo. Mais alto que isso o servidor joga voce no espaco. */
+    static final int ALTURA_MAXIMA = 190;
+    static final int ALTURA_CRUZEIRO = ALTURA_MAXIMA - 5; // cruza um pouco abaixo do limite
 
     static final KeyMapping KEY = new KeyMapping("Esferas: abrir menu / parar", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_K, "Esferas AutoFarm");
 
@@ -131,7 +132,7 @@ public final class EsferasAuto {
         Object cur = achar(alvoEstrelas);
         int by = cur == null ? (int) p.getY() : inteiro(cur, "y");
         int topo = mc.level.getMaxBuildHeight() - 8;
-        cruiseY = Math.min(topo, Math.max(ALTURA_CRUZEIRO, by + 15));
+        cruiseY = Math.min(topo, ALTURA_CRUZEIRO);
         ultimaY = p.getY();
         ticksBola = 0;
         s = S.CLIMB;
@@ -179,6 +180,7 @@ public final class EsferasAuto {
                 if (h < 3.5) { s = S.DESCEND; msg(mc, "Em cima da esfera. Descendo."); return; }
                 p.setYRot(yaw);
                 float pitch = (float) Math.max(-35, Math.min(35, -(cruiseY - p.getY()) * 4));
+                if (p.getY() > ALTURA_MAXIMA - 2) pitch = 35f; // nunca passa do limite
                 p.setXRot(pitch);
                 mc.options.keyUp.setDown(true);
                 mc.options.keySprint.setDown(h > 30);
